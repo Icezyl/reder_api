@@ -3,7 +3,8 @@ const Schema = mongoose.Schema
 const MessageSchema = new Schema({
   sendId: { type: Schema.Types.ObjectId },
   text: { type: String },
-  messageId: { type: Schema.Types.ObjectId },
+  receiveId: { type: Schema.Types.ObjectId },
+  typeId: { type: Number, default: 1 },
   see: { type: Number, default: 1 }
 }, {
   timestamps: { createdAt: 'created', updatedAt: 'updated' },

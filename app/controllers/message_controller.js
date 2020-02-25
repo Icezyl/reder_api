@@ -1,47 +1,59 @@
 const Message_col = require('../models/message')
-const User_col = require('../models/user')
+const Friend_col = require('../models/friend')
 const mongoose = require('mongoose')
+const ObjectId = mongoose.Types.ObjectId
 
-const findId = async (ctx) => {
-  const req = ctx.request.body
-  const s = await Message_col.aggregate([
-    { $match: { sendId: mongoose.Types.ObjectId(req.id) } },
-    {
-      $group: {
-        _id: '$receiveId',
-        arr: { $last: '$$ROOT' },
-        // arr: { $push: '$$ROOT' },
-        see: { $sum: '$see' }
+
+class MessageClt {
+  async findId(ctx) {
+    const list = await Message_col.aggregate([
+      {
+        $match: { receiveId: ObjectId(ctx.params.id) }
+      },
+      {
+        $group: {
+          _id: '$sendId',
+          arr: { $last: '$$ROOT' },
+          // arr: { $push: '$$ROOT' },
+          see: { $sum: '$see' }
+        }
       }
-    }
-    , {
-      $lookup: {
-        from: 'user',
-        localField: '_id',
-        foreignField: '_id',
-        as: 'user_info'
-      }
-    },
-    { $project: { user_info: { _id: 0, age: 0, sex: 0, password: 0 } } }
-  ])
-  ctx.body = {
-    code: 0,
-    data: {
-      list: s
-    }
-  }
-}
-const msgList = async (ctx) => {
-  const req = ctx.request.body
-  if (req.id && req.youId) {
-    const l = await Message_col.aggregate([
-      { $match: { sendId: [mongoose.Types.ObjectId(req.id),mongoose.Types.ObjectId(req.youId)], receiveId: mongoose.Types.ObjectId(req.youId) } },
+      , {
+        $lookup: {
+          from: 'user',
+          localField: '_id',
+          foreignField: '_id',
+          as: 'user_info'
+        }
+      },
+      { $project: { user_info: { age: 0, sex: 0, password: 0 } } }
     ])
+    ctx.body = { list }
+  }
+  async findee(ctx) {
+    const friend = await Friend_col.find({
+      myId: ctx.params.id, success: 1
+    }, { youId: 1, _id: 0 })
+
     ctx.body = {
-      l
+      friend
     }
   }
+  async msgList(ctx) {
+    await Message_col.updateMany({
+      $or: [
+        { $and: [{ sendId: ObjectId(ctx.params.id) }, { receiveId: ObjectId(ctx.state.user._id) }] },
+        { $and: [{ sendId: ObjectId(ctx.state.user._id) }, { receiveId: ObjectId(ctx.params.id) }] }
+      ]
+    }, { see: 0 })
+    const list = await Message_col.find({
+      $or: [
+        { $and: [{ sendId: ObjectId(ctx.params.id) }, { receiveId: ObjectId(ctx.state.user._id) }] },
+        { $and: [{ sendId: ObjectId(ctx.state.user._id) }, { receiveId: ObjectId(ctx.params.id) }] }
+      ]
+    })
+    ctx.body = { list }
+  }
 }
-module.exports = {
-  findId, msgList
-}
+
+module.exports = new MessageClt()

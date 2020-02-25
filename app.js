@@ -2,8 +2,11 @@ const Koa = require('koa')
 const config = require('./config/key')
 const mongoose = require('mongoose')
 const cors = require('koa2-cors')
-const bodyParser = require('koa-bodyparser')
+const koaBody = require('koa-body')
+const static = require('koa-static')
 const passport = require('koa-passport')
+const parameter = require('koa-parameter')
+const path = require('path')
 const app = new Koa()
 const server = require('http').createServer(app.callback())
 const io = require('socket.io')(server)
@@ -13,25 +16,22 @@ mongoose.connect(config.db, { useNewUrlParser: true, useUnifiedTopology: true },
   console.log('connecting database successfully')
 })
 
-// 欢迎加入前端全栈开发交流圈一起吹水聊天学习交流：619586920
 
-require('./routes/api/ws_router')(io)
+require('./socket')(io)
 
-
+app.use(static(path.join(__dirname,'public/uploads')))
 app.use(cors())
-app.use(bodyParser())
-app.use(passport.initialize())
-app.use(passport.session())
+app.use(koaBody({
+  multipart: true, // 启动文件上传
+  formidable: {
+    uploadDir: path.join(__dirname, '/public/uploads'), // 设置上传路径
+    keepExtensions: true, // 保存文件扩展名
+  }
+}))
+app.use(parameter(app))
 
-const user_router = require('./routes/api/user_router')
-const friend_router = require('./routes/api/friend_router')
-const message_router = require('./routes/api/message_router')
-app.use(message_router.routes()).use(message_router.allowedMethods())
-app.use(friend_router.routes()).use(friend_router.allowedMethods())
-app.use(user_router.routes()).use(user_router.allowedMethods())
-
-// 回调到passport.js
-require('./config/passport')(passport)
+// 路由
+require('./routes')(app)
 
 
 server.listen(config.port, err => {
