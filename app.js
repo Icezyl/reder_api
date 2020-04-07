@@ -9,17 +9,15 @@ const parameter = require('koa-parameter')
 const path = require('path')
 const app = new Koa()
 const server = require('http').createServer(app.callback())
-const io = require('socket.io')(server)
+const createSocket = require('./socket')
+createSocket(server) // 连接socket
 
 mongoose.connect(config.db, { useNewUrlParser: true, useUnifiedTopology: true }, (err) => {
   if (err) console.log(err)
   console.log('connecting database successfully')
-})
+}) // 连接mongodb
 
-
-require('./socket')(io)
-
-app.use(static(path.join(__dirname,'public/uploads')))
+app.use(static(path.join(__dirname, 'public/uploads')))
 app.use(cors())
 app.use(koaBody({
   multipart: true, // 启动文件上传

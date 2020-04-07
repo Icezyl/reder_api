@@ -1,0 +1,21 @@
+const Router = require('koa-router')
+const router = new Router({ prefix: '/dynamic' })
+const { send, remove, index, follow, give, findGive, comment, allComment, countComment, findId, unComment, findUserId } = require('../app/controllers/dynamic')
+const jwt = require('koa-jwt')
+const { secret } = require('../config/key')
+const auth = jwt({ secret })
+
+
+router.post('/send', auth, send)
+router.delete('/:id', auth, remove)
+router.post('/give', auth, give)
+router.post('/comment', auth, comment)
+router.delete('/comment', auth, unComment)
+router.get('/give', findGive)
+router.get('/allComment', allComment)
+router.get('/countComment', countComment)
+router.get('/follow', follow)
+router.get('/userId', findUserId)
+router.get('/:id', findId)
+router.get('/', index)
+module.exports = router

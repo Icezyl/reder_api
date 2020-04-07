@@ -1,5 +1,4 @@
 const Message_col = require('../models/message')
-const Friend_col = require('../models/friend')
 const mongoose = require('mongoose')
 const ObjectId = mongoose.Types.ObjectId
 
@@ -8,50 +7,51 @@ class MessageClt {
   async findId(ctx) {
     const list = await Message_col.aggregate([
       {
-        $match: { receiveId: ObjectId(ctx.params.id) }
+        $match: {
+          $or: [
+            { from: ObjectId(ctx.params.id) },
+            { to: ObjectId(ctx.params.id) }
+          ]
+        }
       },
       {
         $group: {
-          _id: '$sendId',
-          arr: { $last: '$$ROOT' },
-          // arr: { $push: '$$ROOT' },
-          see: { $sum: '$see' }
+          _id: '$messageId',
+          arr: { $last: '$$ROOT' }
         }
       }
-      , {
-        $lookup: {
-          from: 'user',
-          localField: '_id',
-          foreignField: '_id',
-          as: 'user_info'
-        }
-      },
-      { $project: { user_info: { age: 0, sex: 0, password: 0 } } }
     ])
     ctx.body = { list }
   }
-  async findee(ctx) {
-    const friend = await Friend_col.find({
-      myId: ctx.params.id, success: 1
-    }, { youId: 1, _id: 0 })
+  async countSee(ctx) {
+    const { id, to } = ctx.query
+    const count = await Message_col.countDocuments({ messageId: id, to: to, see: 1 })
+    ctx.body = { count }
 
-    ctx.body = {
-      friend
-    }
+  }
+  async allSee(ctx) {
+    const count = await Message_col.countDocuments({ to: ctx.params.id, see: 1 })
+    ctx.body = { count }
+  }
+  async clearSee(ctx) {
+    const { to, from } = ctx.request.body
+    await Message_col.updateMany({ to: ObjectId(to), from: ObjectId(from) }, { see: 0 })
+    ctx.status = 204
   }
   async msgList(ctx) {
-    await Message_col.updateMany({
-      $or: [
-        { $and: [{ sendId: ObjectId(ctx.params.id) }, { receiveId: ObjectId(ctx.state.user._id) }] },
-        { $and: [{ sendId: ObjectId(ctx.state.user._id) }, { receiveId: ObjectId(ctx.params.id) }] }
-      ]
-    }, { see: 0 })
-    const list = await Message_col.find({
-      $or: [
-        { $and: [{ sendId: ObjectId(ctx.params.id) }, { receiveId: ObjectId(ctx.state.user._id) }] },
-        { $and: [{ sendId: ObjectId(ctx.state.user._id) }, { receiveId: ObjectId(ctx.params.id) }] }
-      ]
+    let messageId = [ctx.query.id, ctx.query.to].sort().join('_')
+    const count = await Message_col.countDocuments({
+      messageId
     })
+    let ss = count - ctx.query.page * 20
+    let limit = 20
+    if (ss < 0) {
+      limit = limit + ss
+      ss = 0
+    }
+    const list = await Message_col.find({
+      messageId
+    }).limit(limit).skip(ss)
     ctx.body = { list }
   }
 }

@@ -1,10 +1,9 @@
 const path = require('path')
 let qiniu = require('qiniu'); // 需要加载qiniu模块的
 const { send } = require('../../config/mail')
-const { code, expire } = require('../../config/key')
+const { code, expire, accessKey, secretKey, appCertificate, appID } = require('../../config/key')
+const { RtcTokenBuilder, RtcRole } = require('agora-access-token')
 const Code = require('../models/code')
-const accessKey = '8wGIBjaDmYvZPYc567-uUF2PgMtX_fv_k9Fkbu43';
-const secretKey = 'K478Xo9fz7yEB90C2jATy6cDz7TXz9ioHkpD8lTz';
 const bucket = 'reder-avatar';
 
 class HomeCtl {
@@ -42,8 +41,8 @@ class HomeCtl {
     const { email } = ctx.request.body
     const codm = code()
     const time = expire()
-    await send(email, codm).then(async () => {
-      await Code.create({
+    await send(email, codm).then(() => {
+      Code.create({
         code: codm,
         date: time,
         email: email
@@ -52,10 +51,20 @@ class HomeCtl {
         msg: '发送成功'
       }
     }).catch(() => {
+      ctx.status = 404
       ctx.body = {
         msg: '发送失败'
       }
     })
+  }
+  async generateRtcToken(ctx) {
+    const { channelName, uid } = ctx.query
+    var expirationTimeInSeconds = 3600
+    var role = RtcRole.PUBLISHER
+    var currentTimestamp = Math.floor(Date.now() / 1000)
+    var privilegeExpiredTs = currentTimestamp + expirationTimeInSeconds
+    var key = RtcTokenBuilder.buildTokenWithAccount(appID, appCertificate, channelName, 0, role, privilegeExpiredTs)
+    ctx.body = { key }
   }
 }
 module.exports = new HomeCtl()
