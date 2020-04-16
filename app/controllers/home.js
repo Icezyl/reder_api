@@ -4,6 +4,7 @@ const { send } = require('../../config/mail')
 const { code, expire, accessKey, secretKey, appCertificate, appID } = require('../../config/key')
 const { RtcTokenBuilder, RtcRole } = require('agora-access-token')
 const Code = require('../models/code')
+const Feedback = require('../models/feedback')
 const bucket = 'reder-avatar';
 
 class HomeCtl {
@@ -65,6 +66,14 @@ class HomeCtl {
     var privilegeExpiredTs = currentTimestamp + expirationTimeInSeconds
     var key = RtcTokenBuilder.buildTokenWithAccount(appID, appCertificate, channelName, 0, role, privilegeExpiredTs)
     ctx.body = { key }
+  }
+  async addFeedback(ctx) {
+    const ok = await Feedback.create(ctx.request.body)
+    ctx.body = { ok }
+  }
+  async findFeedback(ctx) {
+    const list = await Feedback.find()
+    ctx.body = { list }
   }
 }
 module.exports = new HomeCtl()

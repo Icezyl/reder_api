@@ -1,6 +1,7 @@
 module.exports = {
   port: 5000,
   db: 'mongodb://root:123456@localhost:27017/red?authSource=admin',
+  // db: 'mongodb://root:123456@mongo:27017/red?authSource=admin',
   accessKey: '8wGIBjaDmYvZPYc567-uUF2PgMtX_fv_k9Fkbu43',
   secretKey: 'K478Xo9fz7yEB90C2jATy6cDz7TXz9ioHkpD8lTz',
   secret: 'secret',
